@@ -2,11 +2,12 @@ import pandas as pd
 
 class HRDataProcessor:
     def __init__(self, file_object):
-        # Читаем файл (поддерживаем и CSV, и Excel)
         try:
-            # Пытаемся прочитать как CSV (т.к. вы прикрепили CSV)
+            # Пытаемся прочитать как CSV
             self.df = pd.read_csv(file_object)
-        except:
+        except Exception:
+            # ВАЖНО: сбрасываем указатель файла в начало перед второй попыткой
+            file_object.seek(0)
             # Если не вышло, пробуем как Excel
             self.df = pd.read_excel(file_object)
         
