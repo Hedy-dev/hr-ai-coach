@@ -67,7 +67,7 @@ from streamlit_lottie import st_lottie
 from modules.processor import HRDataProcessor
 from modules.llm_engine import HRAnalyzer
 
-st.set_page_config(page_title="AI HR Coach", page_icon="💼", layout="wide")
+st.set_page_config(page_title="AI HR Coach", page_icon="", layout="wide")
 
 def set_bg_hack(main_bg):
     """Устанавливает картинку на фон"""
@@ -109,7 +109,7 @@ def load_lottieurl(filepath: str):
 set_bg_hack("background.jpg")
 
 # Основной интерфейс
-st.title("🎓 ИИ-Тренажер: Собеседование с HR")
+st.title("ИИ-Тренажер: Собеседование с HR")
 st.write("Сравните свои ответы с реальным опытом десятков HR-специалистов.")
 
 # Боковая панель
@@ -169,13 +169,13 @@ if uploaded_file and api_key:
                         
                         # Позиция студента
                         st.write("### Оценка вашего ответа:")
-                        st.markdown(f"🎯 **Совпадение с рынком:** {data.get('student_match')}")
+                        st.markdown(f"**Совпадение с рынком:** {data.get('student_match')}")
                         
                         # Критика в желтом блоке
-                        st.warning(f"💡 **Зоны роста (критика):**\n\n{data.get('critique')}")
+                        st.warning(f" **Зоны роста (критика):**\n\n{data.get('critique')}")
                         
                         # Золотой стандарт в зеленом блоке
-                        st.success(f"🏆 **Золотой стандарт:**\n\n{data.get('gold_standard')}")
+                        st.success(f" **Золотой стандарт:**\n\n{data.get('gold_standard')}")
 
         else:
             st.info("👈 Выберите вопрос, напишите ответ и нажмите кнопку проверки. Здесь появится подробный разбор.")
