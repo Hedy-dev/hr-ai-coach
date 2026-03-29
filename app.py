@@ -6,7 +6,7 @@ from modules.processor import HRDataProcessor
 from modules.llm_engine import HRAnalyzer
 
 st.set_page_config(page_title="AI HR Coach", page_icon="", layout="wide")
-
+# код
 def set_bg_hack(main_bg):
     """Устанавливает картинку на фон"""
     try:
