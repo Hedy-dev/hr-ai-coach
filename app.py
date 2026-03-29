@@ -6,6 +6,7 @@ from modules.processor import HRDataProcessor
 from modules.llm_engine import HRAnalyzer
 
 st.set_page_config(page_title="AI HR Coach", page_icon="", layout="wide")
+
 # код
 def set_bg_hack(main_bg):
     """Устанавливает картинку на фон"""
@@ -33,7 +34,7 @@ def set_bg_hack(main_bg):
             unsafe_allow_html=True
         )
     except FileNotFoundError:
-        pass # Если картинки нет, просто игнорируем
+        pass  # Если картинки нет, просто игнорируем
 
 def load_lottieurl(filepath: str):
     """Загрузка локальной Lottie анимации"""
@@ -75,11 +76,19 @@ if uploaded_file and api_key:
     with col1:
         st.subheader("Практика")
         selected_q = st.selectbox("Выберите вопрос из базы:", proc.questions)
+        
+        # 👉 ДОБАВЛЕНО: полный текст вопроса
+        st.markdown(f"**Вопрос:** {selected_q}")
+        
         hr_list = proc.get_valid_answers(selected_q)
         
         st.caption(f"🔍 Найдено экспертных мнений по вопросу: {len(hr_list)}")
         
-        student_ans = st.text_area("Ваш ответ:", height=250, placeholder="Напишите, как бы вы ответили на этот вопрос...")
+        student_ans = st.text_area(
+            "Ваш ответ:",
+            height=250,
+            placeholder="Напишите, как бы вы ответили на этот вопрос..."
+        )
         
         run_btn = st.button("Проверить мой ответ", type="primary")
 
@@ -101,7 +110,10 @@ if uploaded_file and api_key:
                         # Красивый вывод кластеров
                         st.write("### Как ответили HR-директора:")
                         for cluster in data.get("clusters", []):
-                            st.info(f"**{cluster.get('name')} ({cluster.get('percentage')})**\n\n{cluster.get('description')}")
+                            st.info(
+                                f"**{cluster.get('name')} ({cluster.get('percentage')})**\n\n"
+                                f"{cluster.get('description')}"
+                            )
                         
                         st.write("---")
                         
@@ -110,10 +122,14 @@ if uploaded_file and api_key:
                         st.markdown(f"**Совпадение с рынком:** {data.get('student_match')}")
                         
                         # Критика в желтом блоке
-                        st.warning(f" **Зоны роста (критика):**\n\n{data.get('critique')}")
+                        st.warning(
+                            f" **Зоны роста (критика):**\n\n{data.get('critique')}"
+                        )
                         
                         # Золотой стандарт в зеленом блоке
-                        st.success(f" **Золотой стандарт:**\n\n{data.get('gold_standard')}")
+                        st.success(
+                            f" **Золотой стандарт:**\n\n{data.get('gold_standard')}"
+                        )
 
         else:
             st.info("👈 Выберите вопрос, напишите ответ и нажмите кнопку проверки. Здесь появится подробный разбор.")
