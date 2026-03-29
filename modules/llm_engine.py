@@ -1,75 +1,122 @@
 import json
 from gigachat import GigaChat
 
+
 class HRAnalyzer:
     def __init__(self, api_key: str):
         self.client = GigaChat(
-            credentials=api_key, 
-            scope="GIGACHAT_API_PERS", 
+            credentials=api_key,
+            scope="GIGACHAT_API_PERS",
             verify_ssl_certs=False
         )
 
     def analyze(self, question, hr_answers, student_answer):
-        # Собираем ответы экспертов
         hr_context = "\n".join([f"ЭКСПЕРТ {i+1}: {a}" for i, a in enumerate(hr_answers)])
-        
-        # Системный промпт с требованием вернуть строгий JSON
-        prompt = f"""Ты — экспертный HR-аналитик. Твоя задача — сравнить ответ Студента с базой ответов HR-директоров.
-        
-        ВОПРОС: {question}
-        
-        БАЗА ОТВЕТОВ HR (Контекст):
-        {hr_context}
-        
-        ОТВЕТ СТУДЕНТА:
-        {student_answer}
-        
-        ИНСТРУКЦИЯ ПО ОТВЕТУ:
-        Сгенерируй ответ СТРОГО в формате JSON без markdown разметки (без ```json ... ```). Используй следующую структуру:
-        {{
-            "clusters": [
-                {{
-                    "name": "Название группы мнений 1",
-                    "percentage": "Примерный %",
-                    "description": "Краткое описание мнения этой группы"
-                }},
-                {{
-                    "name": "Название группы мнений 2",
-                    "percentage": "Примерный %",
-                    "description": "Краткое описание мнения этой группы"
-                }}
-            ],
-            "student_match": "К какой группе ближе студент и почему",
-            "critique": "Чего конкретно не хватает в ответе студента (с опорой на базу)",
-            "gold_standard": "Сначала ОБЯЗАТЕЛЬНО добавь дисклеймер: 'Это не единственно верный и во многом субъективный вариант ответа, однако он отражает наиболее распространённую и сильную позицию на рынке.' Затем с новой строки сформулируй идеальный ответ, объединив лучшие фишки из базы"
-        }}
-        Никакого дополнительного текста до или после JSON быть не должно.
-        """
+
+        # 👉 Новый безопасный промпт
+        prompt = f"""Ты — экспертный HR-аналитик.
+
+Твоя задача — разобрать ответы HR и сравнить с ответом студента.
+
+ВАЖНО: НЕ используй JSON. НЕ используй markdown.
+
+Верни результат СТРОГО в формате:
+
+CLUSTERS:
+1) Название | Процент | Описание
+2) Название | Процент | Описание
+
+MATCH:
+текст
+
+CRITIQUE:
+текст
+
+GOLD:
+Сначала добавь дисклеймер:
+Это не единственно верный и субъективный вариант ответа, однако он отражает наиболее сильную позицию на рынке.
+
+Затем идеальный ответ.
+
+------------------------------------
+
+ВОПРОС:
+{question}
+
+ОТВЕТЫ HR:
+{hr_context}
+
+ОТВЕТ СТУДЕНТА:
+{student_answer}
+"""
 
         try:
             response = self.client.chat(prompt)
-            content = response.choices[0].message.content
-            
-            # Очищаем ответ от случайной Markdown-разметки (если GigaChat все же её добавит)
-            content = content.strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.startswith("```"):
-                content = content[3:]
-            if content.endswith("```"):
-                content = content[:-3]
-            content = content.strip()
+            content = response.choices[0].message.content.strip()
 
-            # Парсим JSON в Python словарь
-            parsed_data = json.loads(content)
-            
-            # Возвращаем в нужном для app.py формате
-            return {"status": "success", "data": parsed_data}
-            
-        except json.JSONDecodeError:
-            return {
-                "status": "error", 
-                "message": "Ошибка: Нейросеть нарушила формат и вернула невалидный JSON. Попробуйте нажать кнопку еще раз."
-            }
+            parsed = self._parse_response(content)
+
+            return {"status": "success", "data": parsed}
+
         except Exception as e:
-            return {"status": "error", "message": f"Ошибка при обращении к GigaChat: {str(e)}"}
+            return {
+                "status": "error",
+                "message": f"Ошибка при обработке ответа модели: {str(e)}"
+            }
+
+    def _parse_response(self, text: str):
+        lines = text.split("\n")
+
+        clusters = []
+        student_match = ""
+        critique = ""
+        gold = ""
+
+        mode = None
+
+        for line in lines:
+            line = line.strip()
+
+            if not line:
+                continue
+
+            if line.startswith("CLUSTERS"):
+                mode = "clusters"
+                continue
+            elif line.startswith("MATCH"):
+                mode = "match"
+                continue
+            elif line.startswith("CRITIQUE"):
+                mode = "critique"
+                continue
+            elif line.startswith("GOLD"):
+                mode = "gold"
+                continue
+
+            # --- Парсинг ---
+            if mode == "clusters":
+                if "|" in line:
+                    parts = [p.strip() for p in line.split("|")]
+
+                    if len(parts) >= 3:
+                        clusters.append({
+                            "name": parts[0].lstrip("1234567890). "),
+                            "percentage": parts[1],
+                            "description": parts[2]
+                        })
+
+            elif mode == "match":
+                student_match += line + " "
+
+            elif mode == "critique":
+                critique += line + " "
+
+            elif mode == "gold":
+                gold += line + " "
+
+        return {
+            "clusters": clusters,
+            "student_match": student_match.strip(),
+            "critique": critique.strip(),
+            "gold_standard": gold.strip()
+        }
